@@ -1,0 +1,23 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef IMAGEEXCEPTION_H
+#define IMAGEEXCEPTION_H
+
+// Exception Handling
+typedef enum {
+  RGB565_IMAGE_NO_ERROR,
+  RGB565_IMAGE_EXCEPTION_OUT_OF_BOUNDS,
+  RGB565_IMAGE_EXCEPTION_MEM_ERR,
+  RGB565_IMAGE_EXCEPTION_FILE_TYPE_ERR,
+  RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR
+} RGB565_IMAGE_EXCEPTION;
+
+void ThrowImageException(RGB565_IMAGE_EXCEPTION e);
+
+#endif
+
+#ifdef __cplusplus
+}
+#endif
