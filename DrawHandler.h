@@ -7,12 +7,7 @@ extern "C" {
 
 #include <stdint.h>
 #include "RGB565Image.h"
-
-typedef enum { FONT_5X7, FONT_8X12, FONT_8X14, FONT_12X16 } font_t;
-typedef enum { ALIGNMENT_LEFT, ALIGNMENT_CENTER, ALIGNMENT_RIGHT } alignment_t;
-
-#define LINE_STYLE_LENGTH 4
-typedef enum { LINE_STYLE_SOLID, LINE_STYLE_DOT, LINE_STYLE_DASH, LINE_STYLE_DASHDOT } line_style_t;
+#include "Config.h"
 
 // RGB 565 Image Draw Class
 typedef struct RGB565ImageDrawHandler {

@@ -69,7 +69,7 @@ int main() {
   pro2->Point_Curve_Points(pro2, px, py, 5, OP_RGB);
   RGB565Processor_Delete(pro2);
 
-  pro2->Rotate(pro2, -3.1415926);
+  pro2->Rotate(pro2, sqrt(3) + log(2.81)); // lol
 
   img2->Render(img2, "rotatedInstagrammable.bmp");
   RGB565Image_Delete(img2);

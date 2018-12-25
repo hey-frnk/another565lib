@@ -136,7 +136,7 @@ void _RGB565Processor_Point_Curve_Pow(struct RGB565Processor *self, float a, uin
 // Given n points (x_i, f(x_i)), return n - 1 cubic spline parameters a...d
 // Numerical Analysis 9th ed - Burden, Faires (Ch. 3 Natural Cubic Spline, Pg. 149)
 // Source: https://gist.github.com/svdamani/1015c5c4b673c3297309
-double **__nCubicInterpolation(double *x, double *a, uint8_t n) {
+static double **__nCubicInterpolation(double *x, double *a, uint8_t n) {
   int32_t i, j;
   n--;
   double h[n], A[n], l[n + 1], u[n + 1], z[n + 1],

@@ -7,13 +7,7 @@ extern "C" {
 
 #include <stdint.h>
 #include "RGB565Image.h"
-
-// Aesthetic parameters
-#define PLOT_INNER_OFFSET   45
-#define PLOT_DIVISIONS_X    10
-#define PLOT_DIVISIONS_Y    5
-#define PLOT_MARK_LENGTH    10
-#define PLOT_VALUES_OFFSET  8
+#include "Config.h"
 
 // Plotter Class
 typedef struct RGB565Plotter {

@@ -7,13 +7,7 @@ extern "C" {
 
 #include <stdint.h>
 #include "RGB565Image.h"
-
-typedef enum { OP_REPLACE, OP_ADD, OP_SUBTRACT, OP_MULTIPLY, OP_DIVIDE } img_op_t;
-
-#define       OP_RED      0x01    // 0001
-#define       OP_GREEN    0x02    // 0010
-#define       OP_BLUE     0x04    // 0100
-#define       OP_RGB      0x07    // 0111
+#include "Config.h"
 
 // Processor Class
 typedef struct RGB565Processor {
