@@ -8,7 +8,7 @@
 #include "Plotter.h"
 #include "DrawHandler.h"
 
-// gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -std=c11 -Wall -o Main
+// gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O3 -std=c17 -Wextra -o Main
 // Random ability demo
 
 int main() {
