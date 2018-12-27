@@ -20,7 +20,7 @@ static inline double _d_yminmax(double *arr, uint32_t n, bool max) {
 }
 
 // Internal Frame & Grid Drawing
-static void __Plot_2D_Create_Axes(struct RGB565Plotter *self) {
+static void _Plotter_Plot_2D_Create_Axes(struct RGB565Plotter *self) {
   RGB565ImageDrawHandler *_h = RGB565ImageDrawHandler_Init(self->img);
 
   for(uint16_t i = 1; i < PLOT_DIVISIONS_X; ++i) _h->DrawLine(_h,
@@ -51,7 +51,7 @@ static void __Plot_2D_Create_Axes(struct RGB565Plotter *self) {
   RGB565ImageDrawHandler_Delete(_h);
 }
 
-static void __Plot_2D_Create_Scale(struct RGB565Plotter *self, double xMin, double xMax, double yMin, double yMax) {
+static void _Plotter_Plot_2D_Create_Scale(struct RGB565Plotter *self, double xMin, double xMax, double yMin, double yMax) {
   RGB565ImageDrawHandler *_h = RGB565ImageDrawHandler_Init(self->img);
 
   double xAbs = fabs(xMin) + fabs(xMax), xDiv = xAbs / (double)PLOT_DIVISIONS_X,
@@ -85,14 +85,14 @@ static void __Plot_2D_Create_Scale(struct RGB565Plotter *self, double xMin, doub
 
 void _Plot_Single_2D(struct RGB565Plotter *self, double *x, double *fx, uint32_t n, uint16_t color) {
   // Draw Framing
-  __Plot_2D_Create_Axes(self);
+  _Plotter_Plot_2D_Create_Axes(self);
 
   // Get (x, y) area
   double xMin = _d_yminmax(x, n, false), xMax = _d_yminmax(x, n, true),
          yMin = _d_yminmax(fx, n, false), yMax = _d_yminmax(fx, n, true);
 
   // Values on Axes
-  __Plot_2D_Create_Scale(self, xMin, xMax, yMin, yMax);
+  _Plotter_Plot_2D_Create_Scale(self, xMin, xMax, yMin, yMax);
 
   // Scale (x, y) to G(x, y)
   float     _scPAW = self->plotArea_w - 3,
@@ -119,7 +119,7 @@ void _Plot_Single_2D(struct RGB565Plotter *self, double *x, double *fx, uint32_t
 
 void _Plot_Multiple_2D(struct RGB565Plotter *self, double *x, double **fx, uint32_t n, uint32_t nfx, uint16_t *colors) {
   // Draw Framing
-  __Plot_2D_Create_Axes(self);
+  _Plotter_Plot_2D_Create_Axes(self);
 
   double *_yMinArr = (double *)malloc(nfx * sizeof(double));
   double *_yMaxArr = (double *)malloc(nfx * sizeof(double));
@@ -136,7 +136,7 @@ void _Plot_Multiple_2D(struct RGB565Plotter *self, double *x, double **fx, uint3
   free(_yMaxArr);
 
   // Values on Axes
-  __Plot_2D_Create_Scale(self, xMin, xMax, yMin, yMax);
+  _Plotter_Plot_2D_Create_Scale(self, xMin, xMax, yMin, yMax);
 
   // Scale (x, y) to G(x, y)
   float     _scPAW = self->plotArea_w - 3,

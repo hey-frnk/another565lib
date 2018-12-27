@@ -110,7 +110,7 @@ RGB565Image *RGB565Image_InitWithFile(const char *path) {
   uint32_t _bmpFileSize = ftell(_imageReader);
   fseek(_imageReader, 0, SEEK_SET);
 
-  uint8_t *_inputImage = malloc(_bmpFileSize * sizeof(uint8_t)), *_inputImagePtr;
+  uint8_t *_inputImage = (uint8_t *)malloc(_bmpFileSize * sizeof(uint8_t)), *_inputImagePtr;
   if(!_inputImage) ThrowImageException(RGB565_IMAGE_EXCEPTION_MEM_ERR);
 
   _inputImagePtr = _inputImage;
