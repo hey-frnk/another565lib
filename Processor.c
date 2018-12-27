@@ -250,8 +250,7 @@ void _processor_Convolve(struct RGB565Processor *self, double **kernel, int16_t 
 }
 
 void _RGB565Processor_Dreamify(struct RGB565Processor *self) {
-  // Lololol look@that C++ compatibility boilerplate again...
-  int16_t kernelSize = 9;
+  const int16_t kernelSize = 9;
   double **_kernel = (double **)calloc(kernelSize, sizeof(double *));
   for(uint8_t i = 0; i < kernelSize; ++i) _kernel[i] = (double *)calloc(kernelSize, sizeof(double));
 
