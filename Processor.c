@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 #include "Processor.h"
 #include "ImageException.h"
 
@@ -215,44 +216,58 @@ static inline void processor_BorderHandling(int16_t *cx, int16_t *cy, int16_t sr
   else if(*cy >= srcr) *cy -= abs(*cy - (srcr - 1));
 }
 
-void _processor_Convolve(struct RGB565Processor *self, double **kernel, int16_t kernelSize) {
+void _processor_SeperableConvolution(struct RGB565Processor *self, double *k1, double *k2, int16_t kernelSize) {
   // Empty sheet!
-  uint16_t **_rTarget = (uint16_t **)calloc(self->img->height, sizeof(uint16_t *));
-  if(!_rTarget) ThrowImageException(RGB565_IMAGE_EXCEPTION_MEM_ERR);
-  for(uint16_t i = 0; i < self->img->height; ++i) {
-    _rTarget[i] = (uint16_t *)calloc(self->img->width, sizeof(uint16_t));
-    if(!_rTarget[i]) ThrowImageException(RGB565_IMAGE_EXCEPTION_MEM_ERR);
+  float ***_rTarget = (float ***)malloc(3 * sizeof(float **));
+  for(uint8_t i = 0; i < 3; ++i) {
+    _rTarget[i] = (float **)malloc(self->img->height * sizeof(float *));
+    for(uint16_t j = 0; j < self->img->height; ++j) _rTarget[i][j] = (float *)calloc(self->img->width, sizeof(float));
   }
+
   int16_t kernelHalf = kernelSize >> 1;
 
-  // For every pixel (x, y) in src
+  // Convolve in y and x
   for(int16_t y = 0; y < self->img->height; ++y) {
     for(int16_t x = 0; x < self->img->width; ++x) {
-      // Iterate over every pixel near (x, y) up to 1/2 kernel size
-      double pixelVal[3] = {0.0f, 0.0f, 0.0f};
-      for(int16_t j = -kernelHalf; j <= kernelHalf; ++j) {
-        for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
-          for(uint8_t k = 0; k < 3; ++k) {
-            int16_t fy = y - j, fx = x - i;
-            processor_BorderHandling(&fx, &fy, self->img->width, self->img->height);
-            pixelVal[k] += kernel[j + kernelHalf][i + kernelHalf] * _processor_getCC(self->img->bitmap[fy][fx], k);
-          }
+      for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
+        for(uint8_t k = 0; k < 3; ++k) {
+          int16_t fy = y - i, fx = x;
+          processor_BorderHandling(&fx, &fy, self->img->width, self->img->height);
+          _rTarget[k][y][x] += (float)(k1[i + kernelHalf] * _processor_getCC(self->img->bitmap[fy][fx], k));
         }
       }
-      for(uint8_t k = 0; k < 3; ++k) pixelVal[k] = (pixelVal[k] > 255.0f) ? 255.0f : (pixelVal[k] < 0.0f ? 0.0 : round(pixelVal[k]));
-      // And write sum to target pixel
-      _rTarget[y][x] = _processor_to565(pixelVal[0], pixelVal[1], pixelVal[2]);
     }
   }
-  for(uint16_t i = 0; i < self->img->height; ++i) free(self->img->bitmap[i]);
-  free(self->img->bitmap);
-  self->img->bitmap = _rTarget;
+  for(int16_t y = 0; y < self->img->height; ++y) {
+    for(int16_t x = 0; x < self->img->width; ++x) {
+      float pixelVal[3] = {0.0f, 0.0f, 0.0f};
+      for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
+        for(uint8_t k = 0; k < 3; ++k) {
+          int16_t fy = y, fx = x - i;
+          processor_BorderHandling(&fx, &fy, self->img->width, self->img->height);
+          pixelVal[k] += (float)(k2[i + kernelHalf] * _rTarget[k][fy][fx]);
+        }
+      }
+      for(uint8_t k = 0; k < 3; ++k) _rTarget[k][y][x] = (pixelVal[k] > 255.0f) ? 255.0f : (pixelVal[k] < 0.0f ? 0.0 : round(pixelVal[k]));
+    }
+  }
+
+  for(uint16_t i = 0; i < self->img->height; ++i)
+    for(uint16_t j = 0; j < self->img->width; ++j) self->img->bitmap[i][j] = _processor_to565(_rTarget[0][i][j], _rTarget[1][i][j], _rTarget[2][i][j]);
+
+
+  for(uint8_t i = 0; i < 3; ++i) {
+    for(uint16_t j = 0; j < self->img->height; ++j) free(_rTarget[i][j]);
+    free(_rTarget[i]);
+  }
+  free(_rTarget);
 }
 
-void _RGB565Processor_Dreamify(struct RGB565Processor *self) {
-  const int16_t kernelSize = 9;
-  double **_kernel = (double **)calloc(kernelSize, sizeof(double *));
-  for(uint8_t i = 0; i < kernelSize; ++i) _kernel[i] = (double *)calloc(kernelSize, sizeof(double));
+void _RGB565Processor_Dreamify(struct RGB565Processor *self, uint8_t dreaminess) {
+  assert(!(dreaminess < 1 || dreaminess > 10));
+
+  int16_t kernelSize = 4 * dreaminess + 1;
+  double *_kernel = (double *)calloc(kernelSize, sizeof(double));
 
   // Create gaussian kernel
   int16_t     kernelHalf  = kernelSize >> 1;                // Onehalf kernel size
@@ -260,18 +275,15 @@ void _RGB565Processor_Dreamify(struct RGB565Processor *self) {
   double      tssq        = -2.0f * sigma * sigma,          // Exponential division factor
               normFactor  = 0.0f;
 
-  for(int16_t j = -kernelHalf; j <= kernelHalf; ++j) {
-    for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
-      double spatialWeight = exp((i * i + j * j) / tssq);
-      _kernel[j + kernelHalf][i + kernelHalf] = spatialWeight;
-      normFactor += spatialWeight;
-    }
+  for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
+    double _kv = exp((i * i) / tssq);
+    _kernel[i + kernelHalf] = _kv;
+      normFactor += _kv;
   }
-  for(int i = 0; i < kernelSize; ++i) for(int j = 0; j < kernelSize; ++j) _kernel[i][j] /= normFactor;
+  for(int i = 0; i < kernelSize; ++i) _kernel[i] /= normFactor;
 
-  _processor_Convolve(self, _kernel, kernelSize);
+  _processor_SeperableConvolution(self, _kernel, _kernel, kernelSize);
 
-  for(uint16_t i = 0; i < kernelSize; ++i) free(_kernel[i]);
   free(_kernel);
 }
 

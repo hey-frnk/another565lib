@@ -7,12 +7,13 @@
 #include "DrawHandler.h"
 #include "Plotter.h"
 #include "DrawHandler.h"
+#include "ImageException.h"
 
 // gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O3 -std=c17 -Wextra -o Main
 // gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O0 -g3 -std=c17 -Wextra -o Main
 // Random ability demo
 
-int main() {
+int main(int argc, char **argv) {
   // New Image
   int w = 833, h = 639;
   RGB565Image *img = RGB565Image_InitWithColor(w, h, 0xFFFF);
@@ -55,8 +56,11 @@ int main() {
   RGB565Image_Delete(img);
 
 
-
-  RGB565Image *img2 = RGB565Image_InitWithFile("instagrammable.bmp");
+  if(argc <= 1) {
+    printf("Oops, use the second parameter for the image!\n");
+    ThrowImageException(RGB565_IMAGE_NO_ERROR);
+  }
+  RGB565Image *img2 = RGB565Image_InitWithFile(argv[1]);
 
   RGB565Plotter *k = RGB565Plotter_Init(img2, 2, 2, img2->width - 4, 200);
   k->Plot_Multiple_2D(k, signalArray, outputArrayArray, samples, 2, colors);
@@ -71,11 +75,11 @@ int main() {
   double py[5] = {55, 100, 180, 210, 220};
 
   pro2->Point_Curve_Points(pro2, px, py, 5, OP_RGB);
-  pro2->Dreamify(pro2);
+  pro2->Dreamify(pro2, 8);
 
   pro2->Rotate(pro2, sqrt(3) + log(2.81)); // lol
   RGB565Processor_Delete(pro2);
 
-  img2->Render(img2, "rotatedInstagrammable.bmp");
+  img2->Render(img2, "output.bmp");
   RGB565Image_Delete(img2);
 }

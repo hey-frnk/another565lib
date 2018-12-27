@@ -28,8 +28,8 @@ typedef struct RGB565Processor {
   // Histogram manipulation with Lightroom-like point curve, given n points (x, fx), applied to colorComponent (cubic spline interpolated)
   void          (*Point_Curve_Points) (struct RGB565Processor *self, double *x, double *fx, uint8_t n, uint8_t colorComponent);
 
-  // Blur Image. Add a dreamy magical (gaussian) blur!
-  void          (*Dreamify)           (struct RGB565Processor *self);
+  // Blur Image. Add a dreamy magical (gaussian) blur. Dreaminess = drunkness (how much blur!)
+  void          (*Dreamify)           (struct RGB565Processor *self, uint8_t dreaminess);
 } RGB565Processor;
 
 RGB565Processor *RGB565Processor_Init(RGB565Image *img);

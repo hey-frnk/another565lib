@@ -12,6 +12,8 @@ void ThrowImageException(RGB565_IMAGE_EXCEPTION e) {
       printf("RGB 565 Image Exception: Image Format Incorrect!\n"); break;
     case RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR:
       printf("RGB 565 Image Exception: Bitmap is not of type 16 bit RGB 565!\n"); break;
+    case RGB565_IMAGE_EXCEPTION_DRUNK:
+      printf("RGB 565 Image Exception: That's too dreamy your computer will probably hate you!\n"); break;
     default:
       printf("RGB 565 Image Exception: Undefined Error!\n"); break;
   }
