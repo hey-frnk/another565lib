@@ -143,11 +143,11 @@ RGB565Image *RGB565Image_InitWithFile(const char *path) {
   _inputImagePtr += 8; // skip data size
 
   // X & Y Pixels per meter check
-  _bBMPchecker &= _inputImagePtr[0] == 0x12 && _inputImagePtr[1] == 0x0B;
-  if(!_bBMPchecker) ThrowImageException(RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR);
+  // _bBMPchecker &= _inputImagePtr[0] == 0x12 && _inputImagePtr[1] == 0x0B;
+  // if(!_bBMPchecker) ThrowImageException(RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR);
   _inputImagePtr += 4;
-  _bBMPchecker &= _inputImagePtr[0] == 0x12 && _inputImagePtr[1] == 0x0B;
-  if(!_bBMPchecker) ThrowImageException(RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR);
+  // _bBMPchecker &= _inputImagePtr[0] == 0x12 && _inputImagePtr[1] == 0x0B;
+  // if(!_bBMPchecker) ThrowImageException(RGB565_IMAGE_EXCEPTION_BMP_TYPE_ERR);
   _inputImagePtr += 12;
 
   // Bit mask check
