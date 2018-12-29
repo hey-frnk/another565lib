@@ -9,8 +9,12 @@
 #include "DrawHandler.h"
 #include "ImageException.h"
 
-// gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O3 -std=c17 -Wextra -o Main
-// gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O0 -g3 -std=c17 -Wextra -o Main
+/*  cd documents/github/another565lib
+    gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O3 -std=c17 -Wextra -o Main
+    gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O0 -g3 -std=c17 -Wextra -o Main
+    valgrind ./Main instagrammable2.jpg
+*/
+
 // Random ability demo
 
 int main(int argc, char **argv) {

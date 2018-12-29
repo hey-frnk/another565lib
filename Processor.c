@@ -54,7 +54,7 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg) {
     for(uint16_t j = 0; j < _NewWidth; ++j) {
       int16_t   x = j - (_NewWidth >> 1),
                 y = (_NewHeight >> 1) - i;
-      float     fAbs = hypotf((double)x, (double)y),
+      float     fAbs = hypotf((float)x, (float)y),
                 fArg = 0.0f;
 
       if (x == 0) {
@@ -65,7 +65,7 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg) {
         else if (y < 0)   fArg = 1.5f * M_PI;
         else              fArg = 0.5f * M_PI;
       }
-      else fArg = atan2f((double)y, (double)x);
+      else fArg = atan2f((float)y, (float)x);
 
       // Rotate
       fArg -= _radV;
@@ -226,7 +226,7 @@ static inline void processor_BorderHandling(int16_t *cx, int16_t *cy, int16_t sr
   else if(*cy >= srcr) *cy -= abs(*cy - (srcr - 1));
 }
 
-void _processor_SeperableConvolution(struct RGB565Processor *self, double *k1, double *k2, int16_t kernelSize) {
+void _processor_SeperableConvolution(struct RGB565Processor *self, float *k1, float *k2, int16_t kernelSize) {
   // Empty sheet!
   float ***_rTarget = (float ***)malloc(3 * sizeof(float **));
   for(uint8_t i = 0; i < 3; ++i) {
@@ -277,7 +277,7 @@ void _RGB565Processor_Dreamify(struct RGB565Processor *self, uint8_t dreaminess)
   assert(!(dreaminess < 1 || dreaminess > 10));
 
   int16_t kernelSize = 4 * dreaminess + 1;
-  double *_kernel = (double *)calloc(kernelSize, sizeof(double));
+  float *_kernel = (float *)calloc(kernelSize, sizeof(float));
 
   // Create gaussian kernel
   int16_t     kernelHalf  = kernelSize >> 1;                // Onehalf kernel size
@@ -286,7 +286,7 @@ void _RGB565Processor_Dreamify(struct RGB565Processor *self, uint8_t dreaminess)
               normFactor  = 0.0f;
 
   for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
-    double _kv = exp((i * i) / tssq);
+    float _kv = (float)exp((i * i) / tssq);
     _kernel[i + kernelHalf] = _kv;
       normFactor += _kv;
   }
