@@ -102,6 +102,16 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg) {
   self->img->height = _NewHeight;
 }
 
+void _RGB565Processor_Grayscale(struct RGB565Processor *self) {
+  for(uint16_t i = 0; i < self->img->height; ++i) {
+    for(uint16_t j = 0; j < self->img->width; ++j) {
+      uint16_t _p = self->img->bitmap[i][j];
+      uint8_t _gp = (uint8_t)((_processor_getCC(_p, 0) + _processor_getCC(_p, 1) + _processor_getCC(_p, 2)) / 3.0f);
+      self->img->bitmap[i][j] = _processor_to565(_gp, _gp, _gp);
+    }
+  }
+}
+
 void _RGB565Processor_Insert(struct RGB565Processor *self, RGB565Image *second, uint16_t x, uint16_t y, img_op_t op) {
   for(uint16_t i = 0; i < second->height; ++i) {
     for(uint16_t j = 0; j < second->width; ++j) {
@@ -291,6 +301,7 @@ RGB565Processor *RGB565Processor_Init(RGB565Image *img) {
   RGB565Processor *self = (RGB565Processor *)calloc(1, sizeof(RGB565Processor));
   self->img = img;
   self->Rotate = _RGB565Processor_Rotate;
+  self->Grayscale = _RGB565Processor_Grayscale;
   self->Insert = _RGB565Processor_Insert;
   self->Invert = _RGB565Processor_Invert;
   self->Point_Curve_Pow = _RGB565Processor_Point_Curve_Pow;

@@ -16,6 +16,9 @@ typedef struct RGB565Processor {
   // Rotate image by degree value (deg)
   void          (*Rotate)             (struct RGB565Processor *self, float deg);
 
+  // Grayscale an image
+  void          (*Grayscale)          (struct RGB565Processor *self);
+
   // Insert a second image at top left (x, y) coordinates using op
   void          (*Insert)             (struct RGB565Processor *self, RGB565Image *second, uint16_t x, uint16_t y, img_op_t op);
 
