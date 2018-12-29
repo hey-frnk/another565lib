@@ -1,5 +1,5 @@
 # Another RGB 565 Image Library
-This is yet another RGB 565 image library in plain C using C standard libraries. It has a whole lot of fun features, let me explain.
+This is yet another RGB 565 image library in plain C (plain C OOP) using C standard libraries. It has a whole lot of fun features, more or less efficient, let me explain.
 
  **RGB565Image.h/c:**  
 - This is the basic image 'class'. It can read and write 16 bit RGB565 BMP files or create new black or custom initialized images
