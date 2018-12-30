@@ -6,8 +6,6 @@
 #include "Processor.h"
 #include "ImageException.h"
 
-#define _CLAMP(pp, min, max) ((pp < min) ? min : ((pp > max) ? max : pp));
-
 static const uint16_t _cmask[3] = {0xF800, 0x07E0, 0x001F};
 static const uint8_t  _cshft[3] = {11, 5, 0};
 static const float    _cfact[3] = {8.225806451612f, 4.047619047619f, 8.225806451612f};
@@ -48,14 +46,15 @@ static inline float _processor_CubicHermite(float A, float B, float C, float D, 
 
 static inline uint16_t _proecssor_bicubicInterpolation565(float dx, float dy, RGB565Image *img, int16_t xOff, int16_t yOff) {
   uint16_t bIp[3];
+  uint16_t _w = img->width, _h = img->height;
   for(uint8_t i = 0; i < 3; ++i) {
     // bcp: rows: ABCD, rows: pixel interp
     float bcp[4][4], c[4];
     for(uint16_t j = 0; j < 4; ++j) {
+      uint16_t apy = yOff + j;
       for(uint16_t k = 0; k < 4; ++k) {
-        uint16_t apx = _CLAMP(xOff + k, 0, img->width - 1);
-        uint16_t apy = _CLAMP(yOff + j, 0, img->height - 1);
-        bcp[j][k] = _processor_getCC(img->bitmap[apy][apx], i);
+        uint16_t  apx = xOff + k;
+        bcp[j][k] = _processor_getCC(((apx >= _w) || (apy >= _h)) ? 0xFFFF : img->bitmap[apy][apx], i);
       }
       c[j] = _processor_CubicHermite(bcp[j][0], bcp[j][1], bcp[j][2], bcp[j][3], dx);
     }
@@ -168,6 +167,7 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
 
       float _fx = fAbs * cosf(fArg);
       float _fy = fAbs * sinf(fArg);
+
       // convert Cartesian to raster
       _fx = _fx + _cX;
       _fy = _cY - _fy;
@@ -182,16 +182,15 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
                 _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
 
         // check bounds
-        if(_iffx < 0 || _icfx < 0 || _iffx >= self->img->width || _icfx >= self->img->width \
-          || _iffy < 0 || _icfy < 0 || _iffy >= self->img->height || _icfy >= self->img->height)
-            continue;
+        uint16_t p0 = (_iffx < 0 || _iffx >= self->img->width || _iffy < 0 || _iffy >= self->img->height) ? 0xFFFF : self->img->bitmap[_iffy][_iffx];
+        uint16_t p1 = (_icfx < 0 || _icfx >= self->img->width || _iffy < 0 || _iffy >= self->img->height) ? 0xFFFF : self->img->bitmap[_iffy][_icfx];
+        uint16_t p2 = (_iffx < 0 || _iffx >= self->img->width || _icfy < 0 || _icfy >= self->img->height) ? 0xFFFF : self->img->bitmap[_icfy][_iffx];
+        uint16_t p3 = (_icfx < 0 || _icfx >= self->img->width || _icfy < 0 || _icfy >= self->img->height) ? 0xFFFF : self->img->bitmap[_icfy][_icfx];
 
         float _dx = _fx - (float)_iffx,
               _dy = _fy - (float)_iffy;
 
-        if (mode == SCALE_BILINEAR) _rTarget[i][j] = _processor_bilinearInterpolation565(_dx, _dy,
-          self->img->bitmap[_iffy][_iffx], self->img->bitmap[_iffy][_icfx],
-          self->img->bitmap[_icfy][_iffx], self->img->bitmap[_icfy][_icfx]);
+        if (mode == SCALE_BILINEAR) _rTarget[i][j] = _processor_bilinearInterpolation565(_dx, _dy, p0, p1, p2, p3);
         else if(mode == SCALE_BICUBIC) _rTarget[i][j] = _proecssor_bicubicInterpolation565(_dx, _dy, self->img, _icfx - 2, _icfy - 2);
       }
     }
