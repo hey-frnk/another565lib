@@ -30,7 +30,8 @@ extern "C" {
 
 // ###################################### Processor
 // Operations, color selection
-typedef enum { OP_REPLACE, OP_ADD, OP_SUBTRACT, OP_MULTIPLY, OP_DIVIDE } img_op_t;
+typedef enum { OP_REPLACE, OP_ADD, OP_SUBTRACT, OP_MULTIPLY, OP_DIVIDE, OP_ABSDIFF } img_op_t;
+typedef enum { SCALE_PLAIN, SCALE_BILINEAR, SCALE_BICUBIC } scale_t;
 
 #define       OP_RED      0x01    // 0001
 #define       OP_GREEN    0x02    // 0010

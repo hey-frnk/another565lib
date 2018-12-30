@@ -6,6 +6,8 @@
 #include "Processor.h"
 #include "ImageException.h"
 
+#define _CLAMP(pp, min, max) ((pp < min) ? min : ((pp > max) ? max : pp));
+
 static const uint16_t _cmask[3] = {0xF800, 0x07E0, 0x001F};
 static const uint8_t  _cshft[3] = {11, 5, 0};
 static const float    _cfact[3] = {8.225806451612f, 4.047619047619f, 8.225806451612f};
@@ -21,6 +23,12 @@ static inline uint16_t _processor_to565(uint8_t r, uint8_t g, uint8_t b){
   return ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
 }
 
+/*static inline uint16_t _processor_getPixelSafe(struct RGB565Image *img, uint16_t x, uint16_t y) {
+  x = _CLAMP(x, 0, img->width - 1);
+  y = _CLAMP(y, 0, img->height - 1);
+  return img->bitmap[y][x];
+}*/
+
 static inline uint16_t _processor_bilinearInterpolation565(double dx, double dy, uint16_t topLeft, uint16_t topRight, uint16_t bottomLeft, uint16_t bottomRight) {
   float t[3], b[3];
   uint16_t bIp[3];
@@ -35,7 +43,101 @@ static inline uint16_t _processor_bilinearInterpolation565(double dx, double dy,
   return _processor_to565(bIp[0], bIp[1], bIp[2]);
 }
 
-void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg) {
+static inline float _processor_CubicHermite(float A, float B, float C, float D, float t) {
+  float   a = -A / 2.0f + (3.0f * B) / 2.0f - (3.0f * C) / 2.0f + D / 2.0f,
+          b = A - (5.0f * B) / 2.0f + 2.0f * C - D / 2.0f,
+          c = -A / 2.0f + C / 2.0f,
+          d = B;
+
+  return (a * t * t * t) + (b * t * t) + (c * t) + d;
+}
+
+static inline uint16_t _proecssor_bicubicInterpolation565(float dx, float dy, RGB565Image *img, int16_t xOff, int16_t yOff) {
+  uint16_t bIp[3];
+  for(uint8_t i = 0; i < 3; ++i) {
+    // bcp: rows: ABCD, rows: pixel interp
+    float bcp[4][4], c[4];
+    for(uint16_t j = 0; j < 4; ++j) {
+      for(uint16_t k = 0; k < 4; ++k) {
+        uint16_t apx = _CLAMP(xOff + k, 0, img->width - 1);
+        uint16_t apy = _CLAMP(yOff + j, 0, img->height - 1);
+        bcp[j][k] = _processor_getCC(img->bitmap[apy][apx], i);
+      }
+      c[j] = _processor_CubicHermite(bcp[j][0], bcp[j][1], bcp[j][2], bcp[j][3], dx);
+    }
+    bIp[i] = (int16_t)roundf(_processor_CubicHermite(c[0], c[1], c[2], c[3], dy));
+    if(bIp[i] < 0) bIp[i] = 0;
+    else if(bIp[i] > 255) bIp[i] = 255; // Clip
+  }
+  return _processor_to565(bIp[0], bIp[1], bIp[2]);
+}
+
+static inline uint16_t _processor_pAssist(struct RGB565Image *img, float u, float v) {
+  uint16_t  _h = img->height - 1,
+            _w = img->width - 1;
+  return img->bitmap[(uint16_t)roundf(v * _h)][(uint16_t)roundf(u * _w)];
+}
+
+static inline uint16_t _processor_lAssist(struct RGB565Image *img, float u, float v) {
+  float _fx = u * (img->width - 1);
+  float _fy = v * (img->height - 1);
+
+  int16_t _iffx = (int16_t)floorf(_fx),  _iffy = (int16_t)floorf(_fy),
+          _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
+
+  float   _dx = _fx - (float)_iffx,
+          _dy = _fy - (float)_iffy;
+
+  return _processor_bilinearInterpolation565(_dx, _dy,
+    img->bitmap[_iffy][_iffx], img->bitmap[_iffy][_icfx],
+    img->bitmap[_icfy][_iffx], img->bitmap[_icfy][_icfx]
+  );
+}
+
+static inline uint16_t _processor_cAssist(struct RGB565Image *img, float u, float v) {
+  float _fx = u * (img->width - 1);
+  float _fy = v * (img->height - 1);
+
+  int16_t _iffx = (int16_t)floorf(_fx),  _iffy = (int16_t)floorf(_fy),
+          _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
+
+  float   _dx = _fx - (float)_iffx,
+          _dy = _fy - (float)_iffy;
+
+  return _proecssor_bicubicInterpolation565(_dx, _dy, img, _icfx - 2, _icfy - 2);
+}
+
+void _RGB565Processor_Scale(struct RGB565Processor *self, float scale, scale_t mode) {
+  uint16_t _NewHeight   = (uint16_t)roundf(scale * self->img->height),
+           _NewWidth    = (uint16_t)roundf(scale * self->img->width),
+           **_rTarget   = (uint16_t **)malloc(_NewHeight * sizeof(uint16_t *));
+
+  uint16_t (*_ResampleHandler)(struct RGB565Image *, float, float) = NULL;
+  switch(mode) {
+    case SCALE_PLAIN:     _ResampleHandler = _processor_pAssist; break;
+    case SCALE_BILINEAR:  _ResampleHandler = _processor_lAssist; break;
+    case SCALE_BICUBIC:   _ResampleHandler = _processor_cAssist; break;
+  }
+  if(!_ResampleHandler) ThrowImageException(RGB565_IMAGE_NO_ERROR);
+
+  for(uint16_t i = 0; i < _NewHeight; ++i) {
+    _rTarget[i] = (uint16_t *)malloc(_NewWidth * sizeof(uint16_t));
+    memset(_rTarget[i], 0xFFFF, _NewWidth * sizeof(uint16_t));
+
+    float v = (float)i / (float)(_NewHeight - 1);
+    for(uint16_t j = 0; j < _NewWidth; ++j)
+      _rTarget[i][j] = _ResampleHandler(self->img, (float)j / (float)(_NewWidth - 1), v);
+  }
+
+  for(uint16_t i = 0; i < self->img->height; ++i) free(self->img->bitmap[i]);
+  free(self->img->bitmap);
+
+  self->img->bitmap = _rTarget;
+  self->img->width = _NewWidth;
+  self->img->height = _NewHeight;
+}
+
+void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mode) {
   float   _radV = ((float)deg * M_PI) / 180.0f,
           _sinPhi = sinf(_radV), _cosPhi = cosf(_radV);
 
@@ -75,21 +177,29 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg) {
       // convert Cartesian to raster
       _fx = _fx + _cX;
       _fy = _cY - _fy;
-      int16_t _iffx = (int16_t)floorf(_fx),  _iffy = (int16_t)floorf(_fy),
-              _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
 
-      // check bounds
-      if(_iffx < 0 || _icfx < 0 || _iffx >= self->img->width || _icfx >= self->img->width \
-        || _iffy < 0 || _icfy < 0 || _iffy >= self->img->height || _icfy >= self->img->height)
-          continue;
+      if(mode == SCALE_PLAIN) {
+        int16_t _ay = (int16_t)roundf(_fy);
+        int16_t _ax = (int16_t)roundf(_fx);
+        if(_ax < 0 || _ax >= self->img->width || _ay < 0 || _ay >= self->img->height) continue;
+        _rTarget[i][j] = self->img->bitmap[_ay][_ax];
+      } else {
+        int16_t _iffx = (int16_t)floorf(_fx),  _iffy = (int16_t)floorf(_fy),
+                _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
 
-      float _dx = _fx - (float)_iffx,
-            _dy = _fy - (float)_iffy;
+        // check bounds
+        if(_iffx < 0 || _icfx < 0 || _iffx >= self->img->width || _icfx >= self->img->width \
+          || _iffy < 0 || _icfy < 0 || _iffy >= self->img->height || _icfy >= self->img->height)
+            continue;
 
-      _rTarget[i][j] = _processor_bilinearInterpolation565(_dx, _dy,
-        self->img->bitmap[_iffy][_iffx], self->img->bitmap[_iffy][_icfx],
-        self->img->bitmap[_icfy][_iffx], self->img->bitmap[_icfy][_icfx]
-      );
+        float _dx = _fx - (float)_iffx,
+              _dy = _fy - (float)_iffy;
+
+        if (mode == SCALE_BILINEAR) _rTarget[i][j] = _processor_bilinearInterpolation565(_dx, _dy,
+          self->img->bitmap[_iffy][_iffx], self->img->bitmap[_iffy][_icfx],
+          self->img->bitmap[_icfy][_iffx], self->img->bitmap[_icfy][_icfx]);
+        else if(mode == SCALE_BICUBIC) _rTarget[i][j] = _proecssor_bicubicInterpolation565(_dx, _dy, self->img, _icfx - 2, _icfy - 2);
+      }
     }
   }
 
@@ -127,6 +237,7 @@ void _RGB565Processor_Insert(struct RGB565Processor *self, RGB565Image *second, 
           else if(op == OP_SUBTRACT) cvt[k] = (int16_t)roundf(cvs[k] - _processor_getCC(second->bitmap[i][j], k));
           else if(op == OP_MULTIPLY) cvt[k] = (int16_t)roundf(cvs[k] * _processor_getCC(second->bitmap[i][j], k));
           else if(op == OP_DIVIDE) cvt[k] = (int16_t)roundf(cvs[k] / _processor_getCC(second->bitmap[i][j], k));
+          else if(op == OP_ABSDIFF) cvt[k] = (int16_t)round(fabs(cvs[k] - _processor_getCC(second->bitmap[i][j], k)));
           if(cvt[k] < 0) cvt[k] = 0;
           else if(cvt[k] > 255) cvt[k] = 255; // Clip
         }
@@ -300,6 +411,7 @@ void _RGB565Processor_Dreamify(struct RGB565Processor *self, uint8_t dreaminess)
 RGB565Processor *RGB565Processor_Init(RGB565Image *img) {
   RGB565Processor *self = (RGB565Processor *)calloc(1, sizeof(RGB565Processor));
   self->img = img;
+  self->Scale = _RGB565Processor_Scale;
   self->Rotate = _RGB565Processor_Rotate;
   self->Grayscale = _RGB565Processor_Grayscale;
   self->Insert = _RGB565Processor_Insert;

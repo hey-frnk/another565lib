@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   RGB565Plotter_Delete(p2);
 
   RGB565Processor *processor = RGB565Processor_Init(img);
-  processor->Rotate(processor, 10);
+  processor->Rotate(processor, 10, SCALE_BILINEAR);
   // processor->Rotate(processor, -10);
   RGB565Processor_Delete(processor);
 
@@ -79,10 +79,11 @@ int main(int argc, char **argv) {
   double py[5] = {55, 100, 180, 210, 220};
 
   pro2->Point_Curve_Points(pro2, px, py, 5, OP_RGB);
+  pro2->Rotate(pro2, sqrt(3) + log(2.81), SCALE_BILINEAR); // lol
+  pro2->Rotate(pro2, -(sqrt(3) + log(2.81)), SCALE_PLAIN); // lolwut*/
+  pro2->Dreamify(pro2, 8);
 
-  pro2->Rotate(pro2, sqrt(3) + log(2.81)); // lol
-  pro2->Rotate(pro2, -(sqrt(3) + log(2.81))); // lolwut
-  pro2->Dreamify(pro2, 10);
+  pro2->Scale(pro2, 0.5, SCALE_BICUBIC);
 
   RGB565Processor_Delete(pro2);
 

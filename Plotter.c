@@ -185,7 +185,7 @@ void _Add_Label_Y(struct RGB565Plotter *self, char *label) {
   RGB565ImageDrawHandler_Delete(_h);
 
   RGB565Processor *_pi = RGB565Processor_Init(_i);
-  _pi->Rotate(_pi, 90);
+  _pi->Rotate(_pi, 90, SCALE_PLAIN);
   RGB565Processor_Delete(_pi);
 
   RGB565Processor *_p = RGB565Processor_Init(self->img);

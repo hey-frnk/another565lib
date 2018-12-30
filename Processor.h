@@ -13,8 +13,11 @@ extern "C" {
 typedef struct RGB565Processor {
   RGB565Image *img;
 
+  // Scale image by scale factor (0 to 1)
+  void          (*Scale)              (struct RGB565Processor *self, float scale, scale_t mode);
+
   // Rotate image by degree value (deg)
-  void          (*Rotate)             (struct RGB565Processor *self, float deg);
+  void          (*Rotate)             (struct RGB565Processor *self, float deg, scale_t mode);
 
   // Grayscale an image
   void          (*Grayscale)          (struct RGB565Processor *self);
