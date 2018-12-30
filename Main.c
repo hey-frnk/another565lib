@@ -13,6 +13,7 @@
     gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O3 -std=c17 -Wextra -o Main
     gcc RGB565Image.c Processor.c DrawHandler.c Plotter.c ImageException.c Main.c -O0 -g3 -std=c17 -Wextra -o Main
     valgrind ./Main instagrammable2.jpg
+    find . -name '.DS_Store' -type f -delete
 */
 
 // Random ability demo
@@ -81,9 +82,9 @@ int main(int argc, char **argv) {
   pro2->Point_Curve_Points(pro2, px, py, 5, OP_RGB);
   pro2->Rotate(pro2, sqrt(3) + log(2.81), SCALE_BICUBIC); // lol
   pro2->Rotate(pro2, -(sqrt(3) + log(2.81)), SCALE_BILINEAR); // lolwut
-  pro2->Dreamify(pro2, 8);
+  //pro2->Dreamify(pro2, 8);
 
-  pro2->Scale(pro2, 0.5, SCALE_BICUBIC);
+  //pro2->Scale(pro2, 0.5, SCALE_BICUBIC);
 
   RGB565Processor_Delete(pro2);
 

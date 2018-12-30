@@ -11,17 +11,17 @@ static const uint8_t  _cshft[3] = {11, 5, 0};
 static const float    _cfact[3] = {8.225806451612f, 4.047619047619f, 8.225806451612f};
 
 // Get color component
-static inline double _processor_getCC(uint16_t color, uint8_t component) {
+static inline double _processor_getCC(const uint16_t color, uint8_t const component) {
   return ((((color) & _cmask[component]) >> _cshft[component]) * _cfact[component]);
 }
 
 // Get RGB 565 Color
-static inline uint16_t _processor_to565(uint8_t r, uint8_t g, uint8_t b){
+static inline uint16_t _processor_to565(const uint8_t r, const uint8_t g, const uint8_t b){
   // Mapping goes like RRRRRGGGGGGBBBBB
   return ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
 }
 
-static inline uint16_t _processor_bilinearInterpolation565(double dx, double dy, uint16_t topLeft, uint16_t topRight, uint16_t bottomLeft, uint16_t bottomRight) {
+static inline uint16_t _processor_bilinearInterpolation565(const double dx, const double dy, const uint16_t topLeft, const uint16_t topRight, const uint16_t bottomLeft, const uint16_t bottomRight) {
   float t[3], b[3];
   uint16_t bIp[3];
   for(uint8_t i = 0; i < 3; ++i) {
@@ -35,7 +35,7 @@ static inline uint16_t _processor_bilinearInterpolation565(double dx, double dy,
   return _processor_to565(bIp[0], bIp[1], bIp[2]);
 }
 
-static inline float _processor_CubicHermite(float A, float B, float C, float D, float t) {
+static inline float _processor_CubicHermite(const float A, const float B, const float C, const float D, const float t) {
   float   a = -A / 2.0f + (3.0f * B) / 2.0f - (3.0f * C) / 2.0f + D / 2.0f,
           b = A - (5.0f * B) / 2.0f + 2.0f * C - D / 2.0f,
           c = -A / 2.0f + C / 2.0f,
@@ -44,7 +44,7 @@ static inline float _processor_CubicHermite(float A, float B, float C, float D, 
   return (a * t * t * t) + (b * t * t) + (c * t) + d;
 }
 
-static inline uint16_t _proecssor_bicubicInterpolation565(float dx, float dy, RGB565Image *img, int16_t xOff, int16_t yOff) {
+static inline uint16_t _proecssor_bicubicInterpolation565(const float dx, const float dy, const RGB565Image *img, const int16_t xOff, const int16_t yOff) {
   uint16_t bIp[3];
   uint16_t _w = img->width, _h = img->height;
   for(uint8_t i = 0; i < 3; ++i) {
@@ -134,21 +134,21 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
   float   _radV = ((float)deg * M_PI) / 180.0f,
           _sinPhi = sinf(_radV), _cosPhi = cosf(_radV);
 
-  uint16_t _NewHeight   = (uint16_t)roundf(fabsf(self->img->width * _sinPhi) + fabsf(self->img->height * _cosPhi)),
-           _NewWidth    = (uint16_t)roundf(fabsf(self->img->width * _cosPhi) + fabsf(self->img->height * _sinPhi));
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width,
+                  _NewHeight   = (uint16_t)roundf(fabsf(_w * _sinPhi) + fabsf(_h * _cosPhi)),
+                  _NewWidth    = (uint16_t)roundf(fabsf(_w * _cosPhi) + fabsf(_h * _sinPhi));
 
-  uint16_t _cX = (self->img->width >> 1), _cY = (self->img->height >> 1);
+  uint16_t _cX = (_w >> 1), _cY = (_h >> 1);
 
   uint16_t **_rTarget = (uint16_t **)malloc(_NewHeight * sizeof(uint16_t *));
   for(uint16_t i = 0; i < _NewHeight; ++i) {
-    _rTarget[i] = (uint16_t *)malloc(_NewWidth * sizeof(uint16_t));
+    _rTarget[i] = (uint16_t *)malloc(_NewWidth * sizeof(uint16_t)); // Loop optimize
     memset(_rTarget[i], 0xFFFF, _NewWidth * sizeof(uint16_t));
-  }
 
-  for(uint16_t i = 0; i < _NewHeight; ++i) {
+    int16_t y = (_NewHeight >> 1) - i;
     for(uint16_t j = 0; j < _NewWidth; ++j) {
-      int16_t   x = j - (_NewWidth >> 1),
-                y = (_NewHeight >> 1) - i;
+      int16_t   x = j - (_NewWidth >> 1);
       float     fAbs = hypotf((float)x, (float)y),
                 fArg = 0.0f;
 
@@ -175,17 +175,17 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
       if(mode == SCALE_PLAIN) {
         int16_t _ay = (int16_t)roundf(_fy);
         int16_t _ax = (int16_t)roundf(_fx);
-        if(_ax < 0 || _ax >= self->img->width || _ay < 0 || _ay >= self->img->height) continue;
+        if(_ax < 0 || _ax >= _w || _ay < 0 || _ay >= _h) continue;
         _rTarget[i][j] = self->img->bitmap[_ay][_ax];
       } else {
         int16_t _iffx = (int16_t)floorf(_fx),  _iffy = (int16_t)floorf(_fy),
                 _icfx = (int16_t)ceilf(_fx),   _icfy = (int16_t)ceilf(_fy);
 
         // check bounds
-        uint16_t p0 = (_iffx < 0 || _iffx >= self->img->width || _iffy < 0 || _iffy >= self->img->height) ? 0xFFFF : self->img->bitmap[_iffy][_iffx];
-        uint16_t p1 = (_icfx < 0 || _icfx >= self->img->width || _iffy < 0 || _iffy >= self->img->height) ? 0xFFFF : self->img->bitmap[_iffy][_icfx];
-        uint16_t p2 = (_iffx < 0 || _iffx >= self->img->width || _icfy < 0 || _icfy >= self->img->height) ? 0xFFFF : self->img->bitmap[_icfy][_iffx];
-        uint16_t p3 = (_icfx < 0 || _icfx >= self->img->width || _icfy < 0 || _icfy >= self->img->height) ? 0xFFFF : self->img->bitmap[_icfy][_icfx];
+        uint16_t p0 = (_iffx < 0 || _iffx >= _w || _iffy < 0 || _iffy >= _h) ? 0xFFFF : self->img->bitmap[_iffy][_iffx];
+        uint16_t p1 = (_icfx < 0 || _icfx >= _w || _iffy < 0 || _iffy >= _h) ? 0xFFFF : self->img->bitmap[_iffy][_icfx];
+        uint16_t p2 = (_iffx < 0 || _iffx >= _w || _icfy < 0 || _icfy >= _h) ? 0xFFFF : self->img->bitmap[_icfy][_iffx];
+        uint16_t p3 = (_icfx < 0 || _icfx >= _w || _icfy < 0 || _icfy >= _h) ? 0xFFFF : self->img->bitmap[_icfy][_icfx];
 
         float _dx = _fx - (float)_iffx,
               _dy = _fy - (float)_iffy;
@@ -197,7 +197,7 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
   }
 
   // As the old image is single reference, realloc!
-  for(uint16_t i = 0; i < self->img->height; ++i) free(self->img->bitmap[i]);
+  for(uint16_t i = 0; i < _h; ++i) free(self->img->bitmap[i]);
   free(self->img->bitmap);
 
   self->img->bitmap = _rTarget;
@@ -206,8 +206,10 @@ void _RGB565Processor_Rotate(struct RGB565Processor *self, float deg, scale_t mo
 }
 
 void _RGB565Processor_Grayscale(struct RGB565Processor *self) {
-  for(uint16_t i = 0; i < self->img->height; ++i) {
-    for(uint16_t j = 0; j < self->img->width; ++j) {
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width;
+  for(uint16_t i = 0; i < _h; ++i) {
+    for(uint16_t j = 0; j < _w; ++j) {
       uint16_t _p = self->img->bitmap[i][j];
       uint8_t _gp = (uint8_t)((_processor_getCC(_p, 0) + _processor_getCC(_p, 1) + _processor_getCC(_p, 2)) / 3.0f);
       self->img->bitmap[i][j] = _processor_to565(_gp, _gp, _gp);
@@ -216,9 +218,13 @@ void _RGB565Processor_Grayscale(struct RGB565Processor *self) {
 }
 
 void _RGB565Processor_Insert(struct RGB565Processor *self, RGB565Image *second, uint16_t x, uint16_t y, img_op_t op) {
-  for(uint16_t i = 0; i < second->height; ++i) {
-    for(uint16_t j = 0; j < second->width; ++j) {
-      if(i + y >= self->img->height || j + x >= self->img->width) ThrowImageException(RGB565_IMAGE_EXCEPTION_OUT_OF_BOUNDS);
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width,
+                  _sh = second->height,
+                  _sw = second->width;
+  for(uint16_t i = 0; i < _sh; ++i) {
+    for(uint16_t j = 0; j < _sw; ++j) {
+      if(i + y >= _h || j + x >= _w) ThrowImageException(RGB565_IMAGE_EXCEPTION_OUT_OF_BOUNDS);
 
       if(op == OP_REPLACE) self->img->bitmap[i + y][j + x] = second->bitmap[i][j];
       else {
@@ -241,14 +247,18 @@ void _RGB565Processor_Insert(struct RGB565Processor *self, RGB565Image *second, 
 }
 
 void _RGB565Processor_Invert(struct RGB565Processor *self) {
-  for(uint16_t i = 0; i < self->img->height; ++i)
-    for(uint16_t j = 0; j < self->img->width; ++j)
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width;
+  for(uint16_t i = 0; i < _h; ++i)
+    for(uint16_t j = 0; j < _w; ++j)
       self->img->bitmap[i][j] = ~self->img->bitmap[i][j]; // Bit flip (lol)
 }
 
 void _RGB565Processor_Point_Curve_Pow(struct RGB565Processor *self, float a, uint8_t colorComponent) {
-  for(uint16_t i = 0; i < self->img->height; ++i) {
-    for(uint16_t j = 0; j < self->img->width; ++j) {
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width;
+  for(uint16_t i = 0; i < _h; ++i) {
+    for(uint16_t j = 0; j < _w; ++j) {
       uint16_t _resClr[3];
       for(uint8_t k = 0; k < 3; ++k) {
         double _clrExtract = _processor_getCC(self->img->bitmap[i][j], k);
@@ -296,8 +306,10 @@ static double **_processor_nCubicInterpolation(double *x, double *a, uint8_t n) 
 void _RGB565Processor_Point_Curve_Points(struct RGB565Processor *self, double *x, double *fx, uint8_t n, uint8_t colorComponent) {
   double **s = _processor_nCubicInterpolation(x, fx, n);
 
-  for(uint16_t i = 0; i < self->img->height; ++i) {
-    for(uint16_t j = 0; j < self->img->width; ++j) {
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width;
+  for(uint16_t i = 0; i < _h; ++i) {
+    for(uint16_t j = 0; j < _w; ++j) {
       uint16_t _resClr[3];
 
       for(uint8_t k = 0; k < 3; ++k) {
@@ -331,47 +343,49 @@ static inline void processor_BorderHandling(int16_t *cx, int16_t *cy, int16_t sr
 }
 
 void _processor_SeperableConvolution(struct RGB565Processor *self, float *k1, float *k2, int16_t kernelSize) {
+  const uint16_t  _h = self->img->height,
+                  _w = self->img->width;
+
   // Empty sheet!
   float ***_rTarget = (float ***)malloc(3 * sizeof(float **));
   for(uint8_t i = 0; i < 3; ++i) {
-    _rTarget[i] = (float **)malloc(self->img->height * sizeof(float *));
-    for(uint16_t j = 0; j < self->img->height; ++j) _rTarget[i][j] = (float *)calloc(self->img->width, sizeof(float));
+    _rTarget[i] = (float **)malloc(_h * sizeof(float *));
+    for(uint16_t j = 0; j < _h; ++j) _rTarget[i][j] = (float *)calloc(_w, sizeof(float));
   }
 
   int16_t kernelHalf = kernelSize >> 1;
 
   // Convolve in y and x
-  for(int16_t y = 0; y < self->img->height; ++y) {
-    for(int16_t x = 0; x < self->img->width; ++x) {
+  for(int16_t y = 0; y < _h; ++y) {
+    for(int16_t x = 0; x < _w; ++x) {
+      int16_t fx = x;
       for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
         for(uint8_t k = 0; k < 3; ++k) {
-          int16_t fy = y - i, fx = x;
-          processor_BorderHandling(&fx, &fy, self->img->width, self->img->height);
+          int16_t fy = y - i;
+          processor_BorderHandling(&fx, &fy, _w, _h);
           _rTarget[k][y][x] += (float)(k1[i + kernelHalf] * _processor_getCC(self->img->bitmap[fy][fx], k));
         }
       }
     }
   }
-  for(int16_t y = 0; y < self->img->height; ++y) {
-    for(int16_t x = 0; x < self->img->width; ++x) {
+  for(int16_t y = 0; y < _h; ++y) {
+    int16_t fy = y;
+    for(int16_t x = 0; x < _w; ++x) {
       float pixelVal[3] = {0.0f, 0.0f, 0.0f};
       for(int16_t i = -kernelHalf; i <= kernelHalf; ++i) {
         for(uint8_t k = 0; k < 3; ++k) {
-          int16_t fy = y, fx = x - i;
-          processor_BorderHandling(&fx, &fy, self->img->width, self->img->height);
+          int16_t fx = x - i;
+          processor_BorderHandling(&fx, &fy, _w, _h);
           pixelVal[k] += (float)(k2[i + kernelHalf] * _rTarget[k][fy][fx]);
         }
       }
       for(uint8_t k = 0; k < 3; ++k) _rTarget[k][y][x] = (pixelVal[k] > 255.0f) ? 255.0f : (pixelVal[k] < 0.0f ? 0.0 : round(pixelVal[k]));
+      self->img->bitmap[y][x] = _processor_to565(_rTarget[0][y][x], _rTarget[1][y][x], _rTarget[2][y][x]);
     }
   }
 
-  for(uint16_t i = 0; i < self->img->height; ++i)
-    for(uint16_t j = 0; j < self->img->width; ++j) self->img->bitmap[i][j] = _processor_to565(_rTarget[0][i][j], _rTarget[1][i][j], _rTarget[2][i][j]);
-
-
   for(uint8_t i = 0; i < 3; ++i) {
-    for(uint16_t j = 0; j < self->img->height; ++j) free(_rTarget[i][j]);
+    for(uint16_t j = 0; j < _h; ++j) free(_rTarget[i][j]);
     free(_rTarget[i]);
   }
   free(_rTarget);

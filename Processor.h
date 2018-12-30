@@ -13,7 +13,7 @@ extern "C" {
 typedef struct RGB565Processor {
   RGB565Image *img;
 
-  // Scale image by scale factor (0 to 1)
+  // Scale image by scale factor > 0
   void          (*Scale)              (struct RGB565Processor *self, float scale, scale_t mode);
 
   // Rotate image by degree value (deg)
@@ -34,7 +34,7 @@ typedef struct RGB565Processor {
   // Histogram manipulation with Lightroom-like point curve, given n points (x, fx), applied to colorComponent (cubic spline interpolated)
   void          (*Point_Curve_Points) (struct RGB565Processor *self, double *x, double *fx, uint8_t n, uint8_t colorComponent);
 
-  // Blur Image. Add a dreamy magical (gaussian) blur. Dreaminess = drunkness (how much blur!)
+  // Blur Image. Add a dreamy magical (gaussian) blur. Dreaminess = drunkness (how blurry!)
   void          (*Dreamify)           (struct RGB565Processor *self, uint8_t dreaminess);
 } RGB565Processor;
 
