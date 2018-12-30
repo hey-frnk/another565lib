@@ -23,12 +23,6 @@ static inline uint16_t _processor_to565(uint8_t r, uint8_t g, uint8_t b){
   return ((r & 0b11111000) << 8) | ((g & 0b11111100) << 3) | (b >> 3);
 }
 
-/*static inline uint16_t _processor_getPixelSafe(struct RGB565Image *img, uint16_t x, uint16_t y) {
-  x = _CLAMP(x, 0, img->width - 1);
-  y = _CLAMP(y, 0, img->height - 1);
-  return img->bitmap[y][x];
-}*/
-
 static inline uint16_t _processor_bilinearInterpolation565(double dx, double dy, uint16_t topLeft, uint16_t topRight, uint16_t bottomLeft, uint16_t bottomRight) {
   float t[3], b[3];
   uint16_t bIp[3];
